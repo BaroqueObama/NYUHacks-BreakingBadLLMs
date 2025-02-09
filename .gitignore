@@ -1,0 +1,7 @@
+*.asc
+.ipynb_checkpoints
+.DS_Store
+.ipynb_checkpoints
+__pycache__
+# MkDocs documentation
+site/
