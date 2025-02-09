@@ -52,7 +52,7 @@ st.write("Record an audio!")
 uploaded_audio = st.audio_input("Record message:")
 
 # Set the websocket URL for the Llama server.
-ws_url = "ws://localhost:8765"
+ws_url = "ws://IPADDR1:9000"
 
 if uploaded_audio is not None:
     # Run the async function to send audio and get a response.

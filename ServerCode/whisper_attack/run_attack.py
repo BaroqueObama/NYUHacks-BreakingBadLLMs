@@ -19,6 +19,7 @@ import os
 import sys
 from pathlib import Path
 
+
 import speechbrain as sb
 from hyperpyyaml import load_hyperpyyaml
 from speechbrain.utils.distributed import run_on_main
@@ -200,8 +201,9 @@ def evaluate(hparams_file, run_opts, overrides):
             target=target,
         )
 
-def generate_attack_audio():
-    arguments = ['attack_configs/cw.yaml', '--root=/workspace/pythonny', '--data_csv_name=test-clean-20', '--model_label=tiny.en', '--tokenizer_name=gpt2', '--nb_iter=2000', '--load_audio=False', '--seed=2000', '--attack_name=cw', '--eps=0.1', '--const=4', '--max_decr=8', '--lr=0.01', '--confidence=0.0', '--decrease_factor_eps=0.7']
+def generate_attack_audio(model_type):
+    modelType = f"--model_label={model_type}"
+    arguments = ['attack_configs/cw.yaml', '--root=/workspace/pythonny', '--data_csv_name=test-clean-20', modelType, '--tokenizer_name=gpt2', '--nb_iter=2000', '--load_audio=False', '--seed=2000', '--attack_name=cw', '--eps=0.1', '--const=4', '--max_decr=8', '--lr=0.01', '--confidence=0.0', '--decrease_factor_eps=0.7']
     hparams_file, run_opts, overrides = sb.parse_arguments(arguments)
     sb.utils.distributed.ddp_init_group(run_opts)
 
