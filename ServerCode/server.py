@@ -19,6 +19,7 @@ AUDIO_TYPE_ADV = "adv"
 AUDIO_TYPE_NAT = "nat"
 SAVE_DIR = f"/workspace/pythonny/attacks/cw/whisper-{MODEL_SIZE}/2000/save/"
 CSV_PATH = "ServerCode/data/LibriSpeech/csv/test-clean-20.csv"
+CW_YAML_PATH = "/workspace/pythonny/whisper_attack/attack_configs/cw.yaml"
 
 def string_to_wav(base64_string):
     return base64.b64decode(base64_string)
@@ -71,10 +72,22 @@ async def send_transcript_to_LLM(prompt):
         message = await websocket.recv()
         return message
         
-
+# Function to update the CW attack target prompt
+def update_cw_yaml(target_prompt):
+    with open(CW_YAML_PATH, "r") as file:
+        cw_config = yaml.safe_load(file)
+    
+    cw_config["target_sentence"] = [target_prompt]
+    
+    with open(CW_YAML_PATH, "w") as file:
+        yaml.dump(cw_config, file)
+    
 async def echo(websocket):
-    async for base64_string in websocket:
+    async for combined_message in websocket:
         try:
+            message_arr = combined_message.split("|SPLTI|")
+            target_prompt = message_arr[0]
+            base64_string = message_arr[1]
             print("DECODING INCOMING AUDIO")
             # Save the incoming audio (in base64) as a FLAC file at 16kHz.
             flac_path = SAVE_DIR + "audio_input.flac"
@@ -97,7 +110,7 @@ async def echo(websocket):
             print("CSV updated at:", CSV_PATH)
             
             ## Update Yaml file code
-            
+            update_cw_yaml(target_prompt)
             
             run_attack(MODEL_SIZE)
             

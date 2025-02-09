@@ -31,7 +31,7 @@ def string_to_wav(base64_string, output_path, target_sr=16000):
     # Remove the temporary file
     os.remove(temp_path)
 
-async def send_audio(audiofile, web_url):
+async def send_audio_and_target(audiofile, web_url):
     # Read the audio file provided by Streamlit's audio_input
     audio_file = audiofile.read()
     audio_b64 = base64.b64encode(audio_file).decode()
@@ -50,6 +50,13 @@ st.write("Record an audio!")
 
 # Let the user record an audio message.
 uploaded_audio = st.audio_input("Record message:")
+
+# Input target transcript for cw attack.
+target_prompt = st.text_input("Enter target CW attack prompt:")
+if st.button("Update CW Attack Prompt"):
+    cw_response = asyncio.run(target_prompt+"|"+)
+    st.success("CW attack prompt sent to server!")
+    st.write("Server Response:", cw_response)
 
 # Set the websocket URL for the Llama server.
 ws_url = "ws://IPADDR1:9000"
