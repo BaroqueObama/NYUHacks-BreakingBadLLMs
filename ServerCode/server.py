@@ -9,6 +9,8 @@ import librosa
 import soundfile as sf
 import shutil
 import whisper
+import yaml
+
 
 
 from whisper_attack import run_attack
@@ -77,7 +79,7 @@ def update_cw_yaml(target_prompt):
     with open(CW_YAML_PATH, "r") as file:
         cw_config = yaml.safe_load(file)
     
-    cw_config["target_sentence"] = [target_prompt]
+    cw_config["target_sentence"] = [str(target_prompt)]
     
     with open(CW_YAML_PATH, "w") as file:
         yaml.dump(cw_config, file)
@@ -137,7 +139,7 @@ async def echo(websocket):
             nat_response = parts[1]
             
             # Build the response string.
-            returns = f"adv:{adv_wav_b64}|SPLTI|nat:{nat_wav_b64}|SPLTI|advT:{adv_transcript}|SPLTI|natT:{nat_transcript}|SPLTI|advR:{adv_response}|SPLTI|natR:{nat_response}"
+            returns = f"{adv_wav_b64}|SPLTI|{nat_wav_b64}|SPLTI|{adv_transcript}|SPLTI|{nat_transcript}|SPLTI|{adv_response}|SPLTI|{nat_response}"
             print("Sending response back to client.")
             await websocket.send(returns)
             

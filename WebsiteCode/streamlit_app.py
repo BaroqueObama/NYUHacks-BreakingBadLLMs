@@ -1,4 +1,6 @@
 import streamlit as st
+import  streamlit_toggle as tog
+
 import base64
 import io
 import asyncio
@@ -6,6 +8,7 @@ from websockets import connect
 import os
 import librosa
 import soundfile as sf
+
 
 def string_to_wav(base64_string, output_path, target_sr=16000):
     # Decode the base64 string back into binary data
@@ -31,14 +34,14 @@ def string_to_wav(base64_string, output_path, target_sr=16000):
     # Remove the temporary file
     os.remove(temp_path)
 
-async def send_audio_and_target(audiofile, web_url):
+async def send_audio_and_target(audiofile, prompt, web_url):
     # Read the audio file provided by Streamlit's audio_input
     audio_file = audiofile.read()
     audio_b64 = base64.b64encode(audio_file).decode()
-  
+    
+    combined = prompt + "|SPLTI|" + audio_b64
     async with connect(web_url) as websocket:
-        # Send the audio (in base64 format) to the server
-        await websocket.send(audio_b64)
+        await websocket.send(combined)
         st.write("File sent to server")
         response = await websocket.recv()
     
@@ -46,53 +49,57 @@ async def send_audio_and_target(audiofile, web_url):
     return response
 
 st.title("📄 Breaking Bad LLMs")
-st.write("Record an audio!")
+st.write("Record a regular piece of audio!")
 
 # Let the user record an audio message.
-uploaded_audio = st.audio_input("Record message:")
+uploaded_audio = st.audio_input("Record message (recommended over 6 seconds):")
 
 # Input target transcript for cw attack.
-target_prompt = st.text_input("Enter target CW attack prompt:")
-if st.button("Update CW Attack Prompt"):
-    cw_response = asyncio.run(target_prompt+"|"+)
-    st.success("CW attack prompt sent to server!")
-    st.write("Server Response:", cw_response)
+target_prompt = st.text_input("Enter target prompt (the actual question the model will answer):")
+
+jailbreak = st.toggle("Activate Jailbreak mode (for malicious prompts)")
+
+defense = st.toggle("Activate sandwich LLM defenses")
+
+if 'responsed' not in st.session_state:
+    st.session_state.responsed = False
+
+if st.button("Generate Adversarial Attack"):
+    # cw_response = asyncio.run(target_prompt+"|"+)
+    if uploaded_audio is None:
+        st.error("Please upload an audio file first.")
+    elif target_prompt is None or target_prompt == "":
+        st.error("Please enter a target prompt for the CW attack.")
+    else:
+        st.success("CW attack prompt sent to server!")
+        global cw_response
+        cw_response = send_audio_and_target(uploaded_audio, target_prompt, "ws://IPADDR2:4242")
+        st.session_state.responsed = True
 
 # Set the websocket URL for the Llama server.
 ws_url = "ws://IPADDR1:9000"
 
-if uploaded_audio is not None:
-    # Run the async function to send audio and get a response.
-    results = asyncio.run(send_audio(uploaded_audio, ws_url))
-    
-    # Expected response format:
-    # "adv:<base64_adv_audio>|nat:<base64_nat_audio>|transcript:<transcript_text>"
-    parts = results.split("|")
-    adv_audio_b64 = ""
-    nat_audio_b64 = ""
-    transcript = ""
-    for part in parts:
-        if part.startswith("adv:"):
-            adv_audio_b64 = part[len("adv:"):].strip()
-        elif part.startswith("nat:"):
-            nat_audio_b64 = part[len("nat:"):].strip()
-        elif part.startswith("transcript:"):
-            transcript = part[len("transcript:"):].strip()
-    
+if st.session_state.responsed:
+    part = cw_response.split("|SPLTI|")
+    adv_wav_b64 = part[0]
+    nat_wav_b64 = part[1]
+    adv_transcript = part[2]
+    nat_transcript = part[3]
+    adv_response = part[4]
+    nat_response = part[5]
     # Convert both base64 audio strings into WAV files (resampled at 16000 Hz).
-    string_to_wav(adv_audio_b64, "adv_audio.wav", target_sr=16000)
-    string_to_wav(nat_audio_b64, "nat_audio.wav", target_sr=16000)
+    string_to_wav(adv_wav_b64, "adv_audio.wav", target_sr=16000)
+    string_to_wav(nat_wav_b64, "nat_audio.wav", target_sr=16000)
     
-    # Display the adversarial audio.
-    st.subheader("Adversarial Audio")
-    with open("adv_audio.wav", "rb") as adv_file:
-        st.audio(adv_file, format="audio/wav", start_time=0)
-        
     # Display the natural audio.
     st.subheader("Natural Audio")
     with open("nat_audio.wav", "rb") as nat_file:
         st.audio(nat_file, format="audio/wav", start_time=0)
-    
-    # Display the transcript text.
-    st.subheader("Transcript")
-    st.write(transcript)
+    st.write(f"Model Interpretation: {nat_transcript}")
+    st.write(f"Model Response: {nat_response}")
+    # Display the adversarial audio.
+    st.subheader("Adversarial Audio")
+    with open("adv_audio.wav", "rb") as adv_file:
+        st.audio(adv_file, format="audio/wav", start_time=0)
+    st.write(f"Model Interpretation: {adv_transcript}")
+    st.write(f"Model Response: {adv_response}")
